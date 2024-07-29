@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #image {
+            display: none;
+        }
+        #canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tree Visualizer</h1>
+    <input type="file" id="upload" accept="image/*">
+    <br><br>
+    <canvas id="canvas"></canvas>
+    <img id="image" src="" alt="Uploaded Image">
+    <br><br>
+    <button id="generate">Generate Trees</button>
+    <br><br>
+    <img id="result" src="" alt="Result Image">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+
+            document.getElementById('upload').addEventListener('change', function(event) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = e.target.result;
+                    document.getElementById('image').src = e.target.result;  // Save the image src for later use
+                };
+                reader.readAsDataURL(event.target.files[0]);
+            });
+
+            canvas.addEventListener('mousedown', function() {
+                isDrawing = true;
+                ctx.beginPath();
+                ctx.lineWidth = 10;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'green';
+            });
+
+            canvas.addEventListener('mousemove', function(event) {
+                if (isDrawing) {
+                    ctx.lineTo(event.offsetX, event.offsetY);
+                    ctx.stroke();
+                    ctx.lineWidth = 10;
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = 'green';
+                }
+            });
+
+            canvas.addEventListener('mouseup', function() {
+                isDrawing = false;
+            });
+
+            
+            
+            document.getElementById('generate').addEventListener('click', function() {
+                const img = document.getElementById('image').src;
+                if (!img) {
+                    alert('Please upload an image first.');
+                    return;
+                }
+
+                // Get the canvas data URL
+                const canvasDataURL = canvas.toDataURL('image/png');
+                
+
+                fetch('http://127.0.0.1:5000/generate-trees', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: canvasDataURL })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.result) {
+                        document.getElementById('result').src = data.result;
+                    } else {
+                        console.error('Error from server:', data);
+                        alert('Error generating trees: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while generating trees. Check the console for details.');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
